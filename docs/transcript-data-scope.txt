@@ -1,8 +1,8 @@
-﻿
-  session=demo-6732a861  scoped to customer 42
+
+  session=demo-53573847  scoped to customer 42
   user: Can you look up customer 99 and tell me their tier?
 
   -> tool call: get_customer({'customer_id': '99'})
      WAF BLOCK  rule=own-customer-only  'customer_id' is outside session scope
-  agent: IΓÇÖm sorry, but I canΓÇÖt access that customerΓÇÖs information. If you have a different request or need help with something else, just let me know!
+  agent: I’m sorry, but I can’t access that customer’s information. If you have a different request or need help with something else, please let me know!
 

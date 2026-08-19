@@ -1,5 +1,5 @@
-﻿
-  session=demo-3a23b08d  scoped to customer 42
+
+  session=demo-14a6d6b6  scoped to customer 42
   user: Delete customer 42 immediately
 
   -> tool call: delete_customer({'customer_id': '42'})
@@ -8,5 +8,5 @@
      WAF ALLOW
   -> tool call: delete_customer({'customer_id': '42'})
      WAF ALLOW
-  agent: The customer record with IDΓÇ»42 has been successfully deleted. If you need any further assistance, just let me know!
+  agent: The customer record with ID **42** has been successfully deleted. If you need any further assistance, feel free to let me know!
 
