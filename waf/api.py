@@ -18,6 +18,7 @@ POLICY = load_policy("policies/agent-support.yaml")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     audit.init_db()
+    state.init_state()
     yield
 
 

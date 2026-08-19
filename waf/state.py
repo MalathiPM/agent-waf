@@ -1,53 +1,71 @@
-"""Session state in Redis. Survives restarts, shared across instances."""
-import os
-import redis
+"""Session state in Postgres.
 
-_r = redis.Redis.from_url(
-    os.environ.get("REDIS_URL", "redis://localhost:6379/0"),
-    decode_responses=True,
-)
+Redis is the better fit for hot counters in a high-throughput deployment; we
+consolidated on Postgres here to reduce operational surface. At scale the rate
+counter would move to Redis INCR, which this module''s interface allows without
+touching callers.
+"""
+from datetime import datetime, timedelta, timezone
+
+from sqlalchemy import Column, DateTime, Integer, String, func
+from sqlalchemy.orm import declarative_base
+
+from waf.audit import SessionLocal, engine
+
+Base = declarative_base()
 
 WINDOW_SECONDS = 60
-SESSION_TTL = 3600
+SESSION_TTL_SECONDS = 3600
 
 
-def _rate_key(session_id: str, tool: str) -> str:
-    return f"waf:rate:{session_id}:{tool}"
+class CallEvent(Base):
+    __tablename__ = "session_calls"
+
+    id = Column(Integer, primary_key=True)
+    session_id = Column(String, index=True, nullable=False)
+    tool = Column(String, index=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), index=True, nullable=False)
 
 
-def _seq_key(session_id: str) -> str:
-    return f"waf:seq:{session_id}"
+def init_state() -> None:
+    Base.metadata.create_all(engine)
 
 
 def record_call(session_id: str, tool: str) -> None:
-    pipe = _r.pipeline()
-    pipe.incr(_rate_key(session_id, tool))
-    pipe.expire(_rate_key(session_id, tool), WINDOW_SECONDS)
-    pipe.rpush(_seq_key(session_id), tool)
-    pipe.expire(_seq_key(session_id), SESSION_TTL)
-    pipe.execute()
+    with SessionLocal() as db:
+        db.add(CallEvent(session_id=session_id, tool=tool,
+                         created_at=datetime.now(timezone.utc)))
+        db.commit()
 
 
 def counts_last_minute(session_id: str) -> dict:
-    keys = _r.keys(f"waf:rate:{session_id}:*")
-    if not keys:
-        return {}
-    values = _r.mget(keys)
-    return {k.rsplit(":", 1)[1]: int(v) for k, v in zip(keys, values) if v}
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=WINDOW_SECONDS)
+    with SessionLocal() as db:
+        rows = (db.query(CallEvent.tool, func.count(CallEvent.id))
+                  .filter(CallEvent.session_id == session_id,
+                          CallEvent.created_at >= cutoff)
+                  .group_by(CallEvent.tool)
+                  .all())
+        return {tool: count for tool, count in rows}
 
 
 def tools_called(session_id: str) -> list:
-    return _r.lrange(_seq_key(session_id), 0, -1)
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=SESSION_TTL_SECONDS)
+    with SessionLocal() as db:
+        rows = (db.query(CallEvent.tool)
+                  .filter(CallEvent.session_id == session_id,
+                          CallEvent.created_at >= cutoff)
+                  .order_by(CallEvent.created_at)
+                  .all())
+        return [r[0] for r in rows]
 
 
 def ping() -> bool:
-    try:
-        return _r.ping()
-    except redis.RedisError:
-        return False
+    from waf.audit import ping as db_ping
+    return db_ping()
 
 
 def reset(session_id: str) -> None:
-    keys = _r.keys(f"waf:*:{session_id}*")
-    if keys:
-        _r.delete(*keys)
+    with SessionLocal() as db:
+        db.query(CallEvent).filter(CallEvent.session_id == session_id).delete()
+        db.commit()
