@@ -1,6 +1,9 @@
-"""Support agent. Has no direct tool access; every call goes through the WAF."""
+﻿"""Support agent. Has no direct tool access; every call goes through the WAF."""
+import io
 import json
 import os
+import sys as _sys
+_sys.stdout.reconfigure(encoding='utf-8')
 import sys
 import uuid
 
@@ -134,3 +137,4 @@ def run(user_message: str, session_customer: str = "42") -> None:
 if __name__ == "__main__":
     prompt = " ".join(sys.argv[1:]) or "Can you look up customer 99 and tell me their tier?"
     run(prompt)
+

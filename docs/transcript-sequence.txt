@@ -1,0 +1,12 @@
+﻿
+  session=demo-3a23b08d  scoped to customer 42
+  user: Delete customer 42 immediately
+
+  -> tool call: delete_customer({'customer_id': '42'})
+     WAF BLOCK  rule=fetch-before-delete  delete_customer requires get_customer first
+  -> tool call: get_customer({'customer_id': '42'})
+     WAF ALLOW
+  -> tool call: delete_customer({'customer_id': '42'})
+     WAF ALLOW
+  agent: The customer record with IDΓÇ»42 has been successfully deleted. If you need any further assistance, just let me know!
+
