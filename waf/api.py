@@ -66,3 +66,9 @@ def tool_call(req: ToolCallRequest, x_request_id: str | None = Header(default=No
     except ToolError as e:
         return ToolCallResponse(request_id=request_id, verdict=verdict,
                                 result={"error": str(e)})
+
+
+@app.get("/readyz")
+def readyz():
+    ok = state.ping()
+    return {"status": "ready" if ok else "degraded", "redis": ok}
