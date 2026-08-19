@@ -8,3 +8,6 @@ anthropic
 pytest
 pytest-asyncio
 httpx
+groq
+python-dotenv
+requests
