@@ -1,0 +1,30 @@
+services:
+  waf:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql+psycopg://waf:waf@db:5432/waf
+    depends_on:
+      - redis
+      - db
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: waf
+      POSTGRES_PASSWORD: waf
+      POSTGRES_DB: waf
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
