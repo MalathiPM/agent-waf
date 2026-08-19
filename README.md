@@ -293,7 +293,3 @@ docs/              demo transcripts
 - Only HTTP is exposed; TLS terminates at the platform's load balancer.
 
 ---
-
-## Author
-
-myname — Aivar Innovations Agentic AI Task, August 2026.
