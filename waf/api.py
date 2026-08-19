@@ -1,6 +1,7 @@
 import logging, os, uuid
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Header
+from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 
 from waf import audit, state
@@ -94,4 +95,10 @@ def tool_call(req: ToolCallRequest, x_request_id: str | None = Header(default=No
 
 
 
+
+
+
+@app.get("/", response_class=HTMLResponse)
+def dashboard():
+    return FileResponse("waf/static/dashboard.html")
 
