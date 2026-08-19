@@ -47,3 +47,11 @@ def test_sequence_requires_prior_fetch():
                     Context(session_scope={"customer_id": "42"},
                             called_tools=["get_customer"]), POLICY)
     assert warm.disposition == "ALLOW"
+
+
+def test_shadow_rule_allows_but_records():
+    shadow_policy = load_policy("policies/agent-support-shadow.yaml")
+    v = evaluate(call("update_customer", customer_id="42", note="DROP TABLE x"),
+                 Context(session_scope={"customer_id": "42"}), shadow_policy)
+    assert v.disposition == "SHADOW_BLOCK"
+    assert v.matched_rule == "no-injection-keywords"

@@ -1,4 +1,4 @@
-import logging, uuid
+import logging, os, uuid
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Header
 from pydantic import BaseModel
@@ -12,7 +12,7 @@ from waf.tools import REGISTRY, ToolError
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.getLogger("waf")
 
-POLICY = load_policy("policies/agent-support.yaml")
+POLICY = load_policy(os.environ.get("POLICY_FILE", "policies/agent-support.yaml"))
 
 
 @asynccontextmanager
@@ -46,12 +46,8 @@ def healthz():
 
 @app.get("/readyz")
 def readyz():
-        db_ok = audit.ping()
-    return {
-        "status": "ready" if redis_ok and db_ok else "degraded",
-        "redis": redis_ok,
-        "database": db_ok,
-    }
+    db_ok = audit.ping()
+    return {"status": "ready" if db_ok else "degraded", "database": db_ok}
 
 
 @app.get("/v1/audit")
@@ -95,4 +91,7 @@ def tool_call(req: ToolCallRequest, x_request_id: str | None = Header(default=No
     except ToolError as e:
         return ToolCallResponse(request_id=request_id, verdict=verdict,
                                 result={"error": str(e)})
+
+
+
 
