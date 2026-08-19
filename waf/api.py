@@ -46,7 +46,7 @@ def healthz():
 
 @app.get("/readyz")
 def readyz():
-    redis_ok, db_ok = state.ping(), audit.ping()
+        db_ok = audit.ping()
     return {
         "status": "ready" if redis_ok and db_ok else "degraded",
         "redis": redis_ok,
@@ -95,3 +95,4 @@ def tool_call(req: ToolCallRequest, x_request_id: str | None = Header(default=No
     except ToolError as e:
         return ToolCallResponse(request_id=request_id, verdict=verdict,
                                 result={"error": str(e)})
+
