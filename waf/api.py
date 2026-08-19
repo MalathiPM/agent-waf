@@ -1,8 +1,9 @@
 import logging, uuid
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Header
 from pydantic import BaseModel
 
-from waf import state
+from waf import audit, state
 from waf.engine import evaluate
 from waf.models import Context, ToolCall, Verdict
 from waf.policy import load_policy
@@ -11,8 +12,16 @@ from waf.tools import REGISTRY, ToolError
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.getLogger("waf")
 
-app = FastAPI(title="Agent WAF", version="0.1.0")
 POLICY = load_policy("policies/agent-support.yaml")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    audit.init_db()
+    yield
+
+
+app = FastAPI(title="Agent WAF", version="0.2.0", lifespan=lifespan)
 
 
 class ToolCallRequest(BaseModel):
@@ -34,6 +43,21 @@ def healthz():
     return {"status": "ok"}
 
 
+@app.get("/readyz")
+def readyz():
+    redis_ok, db_ok = state.ping(), audit.ping()
+    return {
+        "status": "ready" if redis_ok and db_ok else "degraded",
+        "redis": redis_ok,
+        "database": db_ok,
+    }
+
+
+@app.get("/v1/audit")
+def get_audit(agent_id: str | None = None, disposition: str | None = None, limit: int = 50):
+    return {"records": audit.query(agent_id=agent_id, disposition=disposition, limit=limit)}
+
+
 @app.post("/v1/tool-call", response_model=ToolCallResponse)
 def tool_call(req: ToolCallRequest, x_request_id: str | None = Header(default=None)):
     request_id = x_request_id or str(uuid.uuid4())
@@ -48,8 +72,12 @@ def tool_call(req: ToolCallRequest, x_request_id: str | None = Header(default=No
     )
 
     verdict = evaluate(call, ctx, POLICY)
+
     log.info("%s agent=%s tool=%s -> %s (%s)",
              request_id, req.agent_id, req.tool, verdict.disposition, verdict.matched_rule)
+
+    audit.record(request_id=request_id, agent_id=req.agent_id, session_id=req.session_id,
+                 tool=req.tool, params=req.params, verdict=verdict)
 
     if verdict.disposition == "BLOCK":
         return ToolCallResponse(request_id=request_id, verdict=verdict)
@@ -66,9 +94,3 @@ def tool_call(req: ToolCallRequest, x_request_id: str | None = Header(default=No
     except ToolError as e:
         return ToolCallResponse(request_id=request_id, verdict=verdict,
                                 result={"error": str(e)})
-
-
-@app.get("/readyz")
-def readyz():
-    ok = state.ping()
-    return {"status": "ready" if ok else "degraded", "redis": ok}
