@@ -1,0 +1,27 @@
+agent_id: support-agent
+scope:
+  customer_id: "${session.customer_id}"
+rules:
+  - name: no-injection-keywords
+    type: parameter
+    applies_to: ["*"]
+    deny_patterns:
+      - "(?i)drop\\s+table"
+      - "(?i)ignore\\s+previous\\s+instructions"
+    max_value_length: 2000
+
+  - name: crm-read-limit
+    type: rate_limit
+    applies_to: ["get_customer"]
+    max_per_minute: 10
+
+  - name: own-customer-only
+    type: data_scope
+    applies_to: ["get_customer", "update_customer"]
+    param: customer_id
+    must_equal: "${session.customer_id}"
+
+  - name: fetch-before-delete
+    type: sequence
+    applies_to: ["delete_customer"]
+    requires_prior: get_customer
