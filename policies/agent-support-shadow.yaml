@@ -17,12 +17,13 @@ rules:
     max_per_minute: 10
 
   - name: own-customer-only
-    type: data_scope
+    type: data_scope_list
     applies_to: ["get_customer", "update_customer"]
     param: customer_id
-    must_equal: "${session.customer_id}"
+    must_be_in: "${session.authorised_customers}"
 
   - name: fetch-before-delete
     type: sequence
     applies_to: ["delete_customer"]
     requires_prior: get_customer
+
