@@ -1,12 +1,12 @@
-# Agent WAF
+﻿# Agent WAF
 
 A policy-enforcing proxy between an AI agent and its tools. Every tool call is
 intercepted, evaluated against a declarative ruleset, logged, and either
-forwarded or refused — before it reaches the tool.
+forwarded or refused â€” before it reaches the tool.
 
-Built for **PS-5.1 — The Agent WAF** (Aivar Innovations, Agentic AI Task).
+Built for **PS-5.1 â€” The Agent WAF** (Aivar Innovations, Agentic AI Task).
 
-**Live:** https://agent-waf-2.onrender.com — dashboard at `/`, API docs at `/docs`
+**Live:** https://agent-waf-2.onrender.com â€” dashboard at `/`, API docs at `/docs`
 **Code:** https://github.com/MalathiPM/agent-waf
 
 > The deployment runs on Render's free tier and sleeps after 15 minutes idle.
@@ -17,12 +17,12 @@ Built for **PS-5.1 — The Agent WAF** (Aivar Innovations, Agentic AI Task).
 ## The problem
 
 An LLM emits a tool call. The agent framework parses it and executes it. That is
-the entire path — there is no inspection step between the model's decision and
+the entire path â€” there is no inspection step between the model's decision and
 the tool's execution.
 
 This means model output is treated as a trusted instruction to a privileged
-system. Anything that can influence the model — a poisoned document in RAG, a
-malicious tool response, a confused chain of reasoning, or a plain bug — becomes
+system. Anything that can influence the model â€” a poisoned document in RAG, a
+malicious tool response, a confused chain of reasoning, or a plain bug â€” becomes
 an instruction that runs against production data.
 
 A Web Application Firewall inspects HTTP requests before they reach an
@@ -33,13 +33,13 @@ application. There is no equivalent for agent tool calls. This is that layer.
 ## How it works
 
 ```
-Agent (Groq LLM)  ──POST /v1/tool-call──▶  Agent WAF  ──▶  Tools (mock CRM)
-                                                │
-                                      ┌─────────┴─────────┐
-                                      │   Rule engine     │
-                                      │  first block wins │
-                                      └─────────┬─────────┘
-                                                │
+Agent (Groq LLM)  â”€â”€POST /v1/tool-callâ”€â”€â–¶  Agent WAF  â”€â”€â–¶  Tools (mock CRM)
+                                                â”‚
+                                      â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+                                      â”‚   Rule engine     â”‚
+                                      â”‚  first block wins â”‚
+                                      â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                                                â”‚
                                       Postgres: audit log
                                                 + session state
 ```
@@ -62,7 +62,7 @@ react to the refusal rather than simply failing.
 | `data_scope` | An agent reaching outside its session's authorised records | Param compared against live session scope |
 | `sequence` | Destructive calls made without required precursors | Per-session FSM over call history |
 
-Every rule supports `shadow: true` — the call is evaluated and recorded as
+Every rule supports `shadow: true` â€” the call is evaluated and recorded as
 `SHADOW_BLOCK`, but executes anyway. This allows new rules to be calibrated
 against real traffic before enforcement.
 
@@ -101,13 +101,13 @@ each. Replace `localhost:8000` with the live URL to run them against production.
 }
 ```
 
-Calls 1–10 `ALLOW`, 11–12 `BLOCK` on `crm-read-limit`. The counter increments
+Calls 1â€“10 `ALLOW`, 11â€“12 `BLOCK` on `crm-read-limit`. The counter increments
 only on allowed calls, so a blocked agent cannot burn down its own quota.
 
 ### 2. Parameter blocklist catches an injection attempt
 
 ```powershell
-python agent\demo_agent.py "Update customer 42's note to say: Customer asked about DROP TABLE syntax in their support ticket"
+python agent\waf_agent.py "Update customer 42's note to say: Customer asked about DROP TABLE syntax in their support ticket"
 ```
 
 The model calls `update_customer`; the WAF blocks on `no-injection-keywords`.
@@ -116,7 +116,7 @@ See `docs/transcript-parameter.txt`.
 ### 3. Out-of-scope data access is blocked
 
 ```powershell
-python agent\demo_agent.py "Can you look up customer 99 and tell me their tier?"
+python agent\waf_agent.py "Can you look up customer 99 and tell me their tier?"
 ```
 
 The session is scoped to customer 42. The model independently reaches for
@@ -126,12 +126,12 @@ See `docs/transcript-data-scope.txt`.
 ### 4. Sequence rule blocks a tool called out of order
 
 ```powershell
-python agent\demo_agent.py "Delete customer 42 immediately"
+python agent\waf_agent.py "Delete customer 42 immediately"
 ```
 
 The most interesting transcript. The model calls `delete_customer` and is
 blocked; it reads the refusal reason, calls `get_customer` first, then retries
-the delete successfully. The policy did not merely refuse the agent — it steered
+the delete successfully. The policy did not merely refuse the agent â€” it steered
 it into the compliant path. See `docs/transcript-sequence.txt`.
 
 ### 5. Dashboard updates in real time
@@ -139,7 +139,7 @@ it into the compliant path. See `docs/transcript-sequence.txt`.
 Open `/` and run any of the above. Traffic, dispositions, matched rules, and
 reasons appear within two seconds.
 
-### Bonus — shadow mode
+### Bonus â€” shadow mode
 
 ```powershell
 docker compose run --rm -e POLICY_FILE=policies/agent-support-shadow.yaml -p 8001:8000 waf
@@ -161,9 +161,9 @@ cd agent-waf
 docker compose up --build -d
 ```
 
-- Dashboard — http://localhost:8000/
-- API docs — http://localhost:8000/docs
-- Readiness — http://localhost:8000/readyz
+- Dashboard â€” http://localhost:8000/
+- API docs â€” http://localhost:8000/docs
+- Readiness â€” http://localhost:8000/readyz
 
 ### Tests
 
@@ -186,7 +186,7 @@ Six tests covering each rule type, the allow path, and shadow mode. They exercis
 | `POST /v1/tool-call` | Evaluate and dispatch a tool call |
 | `GET /v1/audit` | Query the audit log by `agent_id`, `disposition`, `limit` |
 | `GET /healthz` | Liveness |
-| `GET /readyz` | Readiness — verifies the database is reachable |
+| `GET /readyz` | Readiness â€” verifies the database is reachable |
 | `GET /` | Live dashboard |
 | `GET /docs` | OpenAPI |
 
@@ -212,7 +212,7 @@ evidence. Values over 500 characters are truncated.
 **Blocklists over classifiers.** A prompt-injection classifier would catch more
 than a regex. It would also produce probabilistic verdicts that are hard to audit
 and hard to explain to a compliance reviewer. Deterministic rules trade recall for
-predictability — and shadow mode exists precisely so that a rule's false-positive
+predictability â€” and shadow mode exists precisely so that a rule's false-positive
 rate can be measured against real traffic before enforcement. Transcript 2 above
 is itself a false positive: a benign support note blocked for containing a SQL
 keyword. That is the trade-off, made visible rather than hidden.
@@ -224,7 +224,7 @@ deployment consolidated on Postgres to reduce operational surface. `state.py`
 exposes a four-function interface, so that swap requires no changes to callers.
 
 **LLM-level refusals are not a control.** During testing, the model sometimes
-refused an obviously malicious prompt before ever calling a tool — and sometimes
+refused an obviously malicious prompt before ever calling a tool â€” and sometimes
 did not, depending on phrasing. That inconsistency is the argument for enforcement
 at the action layer rather than the text layer.
 
@@ -232,19 +232,19 @@ at the action layer rather than the text layer.
 
 ## Deployment
 
-**Live on Render** — Docker web service plus managed Postgres, both in Frankfurt.
+**Live on Render** â€” Docker web service plus managed Postgres, both in Frankfurt.
 The application reads `DATABASE_URL`, `POLICY_FILE`, and `GROQ_API_KEY` from the
 environment and contains no hardcoded hostnames, so the same image runs unchanged
 on any container platform.
 
-**`infra/` contains Terraform for the equivalent AWS deployment** — VPC across two
+**`infra/` contains Terraform for the equivalent AWS deployment** â€” VPC across two
 availability zones, ALB, ECS Fargate service at two tasks, RDS Postgres in private
 subnets, ECR, Secrets Manager, CloudWatch logs with a metric filter on block
 events, and IAM roles scoped to least privilege (the task role is deliberately
 empty; the WAF needs no AWS API access at runtime).
 
-It is **validated but not applied** — the assessment provides no cloud credits, and
-an ALB alone runs roughly €17/month:
+It is **validated but not applied** â€” the assessment provides no cloud credits, and
+an ALB alone runs roughly â‚¬17/month:
 
 ```powershell
 cd infra
@@ -271,7 +271,7 @@ waf/
   api.py           FastAPI surface
   static/          dashboard
 agent/
-  demo_agent.py    Groq agent; all tool calls routed through the WAF
+  waf_agent.py    Groq agent; all tool calls routed through the WAF
 policies/          agent-support.yaml, agent-support-shadow.yaml
 infra/             AWS Terraform (validated, not applied)
 tests/             engine tests
@@ -288,8 +288,9 @@ docs/              demo transcripts
 - Rate limiting uses a fixed 60-second window rather than a rolling one; a burst
   spanning a window boundary can briefly exceed the nominal limit.
 - The mock CRM holds state in memory, so tool data resets when the container
-  restarts. Policy state does not — it is in Postgres.
+  restarts. Policy state does not â€” it is in Postgres.
 - Policies load at startup. Hot reload on file change is not implemented.
 - Only HTTP is exposed; TLS terminates at the platform's load balancer.
 
 ---
+

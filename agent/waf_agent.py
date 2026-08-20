@@ -1,4 +1,4 @@
-﻿"""Support agent. Has no direct tool access; every call goes through the WAF."""
+"""Support agent. Has no direct tool access; every call goes through the WAF."""
 import io
 import json
 import os
