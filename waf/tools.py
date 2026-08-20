@@ -3,6 +3,12 @@
 _CUSTOMERS = {
     "42": {"customer_id": "42", "name": "Ada Lovelace", "tier": "gold", "note": ""},
     "99": {"customer_id": "99", "name": "Alan Turing", "tier": "silver", "note": ""},
+    "17": {"customer_id": "17", "name": "Grace Hopper", "tier": "gold", "note": ""},
+    "23": {"customer_id": "23", "name": "Katherine Johnson", "tier": "platinum", "note": ""},
+    "31": {"customer_id": "31", "name": "Barbara Liskov", "tier": "silver", "note": ""},
+    "58": {"customer_id": "58", "name": "Margaret Hamilton", "tier": "gold", "note": ""},
+    "64": {"customer_id": "64", "name": "Radia Perlman", "tier": "bronze", "note": ""},
+    "76": {"customer_id": "76", "name": "Shafi Goldwasser", "tier": "silver", "note": ""},
 }
 
 
@@ -37,3 +43,4 @@ REGISTRY = {
     "update_customer": update_customer,
     "delete_customer": delete_customer,
 }
+
