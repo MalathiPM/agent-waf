@@ -7,10 +7,15 @@ over HTTP, which evaluates it against policy before it reaches the CRM.
 Usage:
     python agent/waf_agent.py "What tier is customer 42 on?"
     python agent/waf_agent.py 99 "What tier is customer 99 on?"
+    python agent/waf_agent.py 42,99,17 "What tier is customer 99 on?"
 
-The optional leading number sets the customer the session is scoped to
-(default 42). Requests for any other customer are refused by the data_scope
-rule.
+An optional leading argument sets the customers the session is authorised for
+(default 42). A single ID exercises the `data_scope` rule (must_equal); a
+comma-separated list exercises `data_scope_list` (must_be_in), which needs a WAF
+running the account-manager policy:
+
+    docker compose run --rm -e POLICY_FILE=policies/agent-account-manager.yaml -p 8002:8000 waf
+    $env:AGENT_ID="account-manager"; $env:WAF_URL="http://localhost:8002"
 """
 import json
 import os
@@ -26,6 +31,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 load_dotenv()
 
 WAF_URL = os.environ.get("WAF_URL", "http://localhost:8000")
+AGENT_ID = os.environ.get("AGENT_ID", "support-agent")
 MODEL = "openai/gpt-oss-120b"
 MAX_TURNS = 6
 
@@ -80,14 +86,15 @@ SYSTEM_PROMPT = (
 )
 
 
-def call_via_waf(session_id: str, customer_id: str, tool: str, params: dict) -> dict:
+def call_via_waf(session_id: str, authorised: list, tool: str, params: dict) -> dict:
     """The agent cannot reach the CRM directly. Everything goes through here."""
     response = requests.post(
         f"{WAF_URL}/v1/tool-call",
         json={
-            "agent_id": "support-agent",
+            "agent_id": AGENT_ID,
             "session_id": session_id,
-            "customer_id": customer_id,
+            "customer_id": authorised[0],
+            "authorised_customers": authorised,
             "tool": tool,
             "params": params,
         },
@@ -98,9 +105,9 @@ def call_via_waf(session_id: str, customer_id: str, tool: str, params: dict) -> 
     return response.json()
 
 
-def run(user_message: str, session_customer: str = "42") -> None:
+def run(user_message: str, authorised: list) -> None:
     session_id = f"sess-{uuid.uuid4().hex[:8]}"
-    print(f"\n  session={session_id}  scoped to customer {session_customer}")
+    print(f"\n  session={session_id}  authorised for {', '.join(authorised)}")
     print(f"  user: {user_message}\n")
 
     messages = [
@@ -124,7 +131,7 @@ def run(user_message: str, session_customer: str = "42") -> None:
             print(f"  -> tool call: {tool_call.function.name}({params})")
 
             outcome = call_via_waf(
-                session_id, session_customer, tool_call.function.name, params
+                session_id, authorised, tool_call.function.name, params
             )
             verdict = outcome["verdict"]
 
@@ -155,14 +162,20 @@ def run(user_message: str, session_customer: str = "42") -> None:
     print(f"  agent: (turn limit of {MAX_TURNS} reached)\n")
 
 
+def is_scope_arg(value: str) -> bool:
+    """A leading '42' or '42,99,17' is a scope, not part of the prompt."""
+    parts = [part.strip() for part in value.split(",")]
+    return bool(parts) and all(part.isdigit() for part in parts)
+
+
 def parse_args(argv: list) -> tuple:
-    """A leading numeric argument sets the session scope; the rest is the prompt."""
-    if len(argv) > 1 and argv[0].isdigit():
-        return " ".join(argv[1:]), argv[0]
+    if len(argv) > 1 and is_scope_arg(argv[0]):
+        authorised = [part.strip() for part in argv[0].split(",")]
+        return " ".join(argv[1:]), authorised
     prompt = " ".join(argv) or "What tier is customer 42 on?"
-    return prompt, "42"
+    return prompt, ["42"]
 
 
 if __name__ == "__main__":
-    prompt, scope = parse_args(sys.argv[1:])
-    run(prompt, scope)
+    prompt, authorised = parse_args(sys.argv[1:])
+    run(prompt, authorised)
