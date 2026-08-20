@@ -4,16 +4,12 @@ services:
     ports:
       - "8000:8000"
     environment:
-      REDIS_URL: redis://redis:6379/0
       DATABASE_URL: postgresql+psycopg://waf:waf@db:5432/waf
+      POLICY_FILE: ${POLICY_FILE:-policies/agent-support.yaml}
     depends_on:
-      - redis
-      - db
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
+      db:
+        condition: service_healthy
+    restart: unless-stopped
 
   db:
     image: postgres:16-alpine
@@ -25,6 +21,11 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U waf -d waf"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
 
 volumes:
   pgdata:
