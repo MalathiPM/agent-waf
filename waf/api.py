@@ -30,6 +30,7 @@ class ToolCallRequest(BaseModel):
     agent_id: str
     session_id: str
     customer_id: str
+    authorised_customers: list[str] | None = None
     tool: str
     params: dict = {}
 
@@ -64,7 +65,10 @@ def tool_call(req: ToolCallRequest, x_request_id: str | None = Header(default=No
                     tool=req.tool, params=req.params, request_id=request_id)
 
     ctx = Context(
-        session_scope={"customer_id": req.customer_id},
+session_scope={
+            "customer_id": req.customer_id,
+            "authorised_customers": req.authorised_customers or [req.customer_id],
+        },
         call_counts=state.counts_last_minute(req.session_id),
         called_tools=state.tools_called(req.session_id),
     )

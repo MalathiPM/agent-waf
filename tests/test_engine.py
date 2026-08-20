@@ -55,3 +55,18 @@ def test_shadow_rule_allows_but_records():
                  Context(session_scope={"customer_id": "42"}), shadow_policy)
     assert v.disposition == "SHADOW_BLOCK"
     assert v.matched_rule == "no-injection-keywords"
+
+
+def test_data_scope_list_allows_assigned_account():
+    policy = load_policy("policies/agent-account-manager.yaml")
+    ctx = Context(session_scope={"authorised_customers": ["42", "99", "17"]})
+    v = evaluate(call("get_customer", customer_id="99"), ctx, policy)
+    assert v.disposition == "ALLOW"
+
+
+def test_data_scope_list_blocks_unassigned_account():
+    policy = load_policy("policies/agent-account-manager.yaml")
+    ctx = Context(session_scope={"authorised_customers": ["42", "99", "17"]})
+    v = evaluate(call("get_customer", customer_id="23"), ctx, policy)
+    assert v.disposition == "BLOCK"
+    assert v.matched_rule == "assigned-accounts-only"

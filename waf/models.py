@@ -51,13 +51,19 @@ class DataScopeRule(BaseRule):
     must_equal: str
 
 
+class DataScopeListRule(BaseRule):
+    type: Literal["data_scope_list"]
+    param: str
+    must_be_in: str
+
+
 class SequenceRule(BaseRule):
     type: Literal["sequence"]
     requires_prior: str
 
 
 Rule = Annotated[
-    Union[ParameterRule, RateLimitRule, DataScopeRule, SequenceRule],
+    Union[ParameterRule, RateLimitRule, DataScopeRule, DataScopeListRule, SequenceRule],
     Field(discriminator="type"),
 ]
 

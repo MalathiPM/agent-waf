@@ -1,6 +1,7 @@
 import re
 from waf.models import (
-    Context, ToolCall, ParameterRule, RateLimitRule, DataScopeRule, SequenceRule,
+    Context, ToolCall, ParameterRule, RateLimitRule, DataScopeRule, DataScopeListRule,
+    SequenceRule,
 )
 
 SCOPE_REF = re.compile(r"^\$\{session\.(\w+)\}$")
@@ -40,6 +41,19 @@ def check_data_scope(rule: DataScopeRule, call: ToolCall, ctx: Context):
     return None
 
 
+def check_data_scope_list(rule: DataScopeListRule, call: ToolCall, ctx: Context):
+    """Membership form of data_scope: the session authorises a set of records."""
+    allowed = resolve(rule.must_be_in, ctx)
+    if not isinstance(allowed, (list, tuple, set)):
+        return f"session declares no list for '{rule.must_be_in}'"
+    actual = call.params.get(rule.param)
+    if actual is None:
+        return f"required param '{rule.param}' missing"
+    if str(actual) not in [str(a) for a in allowed]:
+        return f"'{rule.param}'={actual} is not in the session's authorised set"
+    return None
+
+
 def check_sequence(rule: SequenceRule, call: ToolCall, ctx: Context):
     if rule.requires_prior not in ctx.called_tools:
         return f"{call.tool} requires {rule.requires_prior} first"
@@ -50,5 +64,6 @@ CHECKS = {
     "parameter": check_parameter,
     "rate_limit": check_rate_limit,
     "data_scope": check_data_scope,
+    "data_scope_list": check_data_scope_list,
     "sequence": check_sequence,
 }

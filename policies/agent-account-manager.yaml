@@ -1,0 +1,22 @@
+agent_id: account-manager
+scope:
+  authorised_customers: "${session.authorised_customers}"
+rules:
+  - name: no-injection-keywords
+    type: parameter
+    applies_to: ["*"]
+    deny_patterns:
+      - "(?i)drop\\s+table"
+      - "(?i)ignore\\s+previous\\s+instructions"
+    max_value_length: 2000
+
+  - name: assigned-accounts-only
+    type: data_scope_list
+    applies_to: ["get_customer", "update_customer", "delete_customer"]
+    param: customer_id
+    must_be_in: "${session.authorised_customers}"
+
+  - name: fetch-before-delete
+    type: sequence
+    applies_to: ["delete_customer"]
+    requires_prior: get_customer
